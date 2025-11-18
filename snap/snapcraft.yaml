@@ -1,0 +1,134 @@
+name: pulseaudio-minimal
+base: core24
+version: '17.0'
+summary: Minimal PulseAudio sound server for Ubuntu Core
+description: |
+  A minimal PulseAudio sound server snap for Ubuntu Core 24,
+  built using Ubuntu packages. Provides audio-playback and
+  audio-record interfaces for applications like Firefox.
+
+grade: stable
+confinement: strict
+compression: lzo
+license: GPL-2.0+
+website: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap
+source-code: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap
+issues: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap/issues
+
+platforms:
+  arm64:
+    build-on: [arm64, amd64]
+    build-for: [arm64]
+
+apps:
+  pulseaudio:
+    command: bin/pulseaudio
+    daemon: simple
+    install-mode: disable
+    plugs:
+      - alsa
+      - network
+      - network-bind
+      - hardware-observe
+    slots:
+      - audio-playback
+      - audio-record
+
+  pactl:
+    command-chain: [bin/client-wrapper]
+    command: usr/bin/pactl
+    plugs:
+      - network
+      - playback
+      - record
+
+plugs:
+  playback:
+    interface: audio-playback
+  record:
+    interface: audio-record
+
+slots:
+  audio-playback:
+    interface: audio-playback
+  audio-record:
+    interface: audio-record
+
+environment:
+  LD_LIBRARY_PATH: "$SNAP/usr/lib/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR"
+  PULSE_RUNTIME_PATH: /var/run/pulse
+  PULSE_STATE_PATH: $SNAP_COMMON/state
+  ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
+
+layout:
+  /etc/pulse:
+    bind: $SNAP/etc/pulse
+  /etc/alsa:
+    bind: $SNAP/etc/alsa
+  /var/lib/pulse:
+    bind: $SNAP_DATA
+  /usr/share/pulseaudio:
+    symlink: $SNAP/usr/share/pulseaudio
+  /usr/share/alsa:
+    symlink: $SNAP/usr/share/alsa
+
+parts:
+  scripts:
+    plugin: dump
+    source: bin/
+    organize:
+      client-wrapper: bin/client-wrapper
+      pulseaudio: bin/pulseaudio
+    override-prime: |
+      craftctl default
+      chmod +x $CRAFT_PRIME/bin/pulseaudio
+      chmod +x $CRAFT_PRIME/bin/client-wrapper
+
+  config:
+    plugin: dump
+    source: config/
+    organize:
+      default.pa: etc/pulse/default.pa
+      client.conf: etc/pulse/client.conf
+
+  pulseaudio:
+    plugin: nil
+    after: [scripts, config]
+    stage-packages:
+      # Core PulseAudio
+      - pulseaudio
+      - pulseaudio-utils
+      - libpulse0
+      # ALSA support
+      - libasound2
+      - libasound2-plugins
+      # Audio codecs
+      - libsndfile1
+      - libflac12
+      - libogg0
+      - libvorbis0a
+      - libvorbisenc2
+      - libopus0
+      # Essential dependencies
+      - libltdl7
+      - libspeexdsp1
+      - libasyncns0
+      - libtdb1
+      - libsoxr0
+      - liborc-0.4-0
+    override-build: |
+      craftctl default
+      # Create necessary directories
+      mkdir -p $CRAFT_PART_INSTALL/var/run/pulse
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
+    stage:
+      # Stage all libraries - simple but larger
+      - usr/bin/pulseaudio
+      - usr/bin/pactl
+      - usr/bin/pacmd
+      - usr/lib/*
+      - usr/share/pulseaudio/*
+      - usr/share/alsa/*
+      - etc/alsa/*
+      - var/run/pulse
+      - usr/share/applications

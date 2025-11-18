@@ -1,0 +1,50 @@
+#!/bin/bash -e
+
+# Try multiple possible locations for PulseAudio modules
+if [ -d "$SNAP/usr/lib/pulse-16.1+dfsg1" ]; then
+    PA_MODULES_DIR="$SNAP/usr/lib/pulse-16.1+dfsg1"
+elif [ -d "$SNAP/usr/lib/pulse-16.1" ]; then
+    PA_MODULES_DIR="$SNAP/usr/lib/pulse-16.1"
+else
+    # Fallback: try to find it
+    PA_MODULES_DIR=$(ls -d $SNAP/usr/lib/pulse-* 2>/dev/null | head -1)
+fi
+
+if [ -z "$PA_MODULES_DIR" ]; then
+    echo "ERROR: Could not find PulseAudio modules directory"
+    echo "Searched in: $SNAP/usr/lib/"
+    echo "Contents:"
+    ls -la $SNAP/usr/lib/ | grep pulse || echo "No pulse directories found"
+    exit 1
+fi
+
+echo "Using PulseAudio modules from: $PA_MODULES_DIR"
+
+# Set library paths to include the modules directory
+export LD_LIBRARY_PATH="$PA_MODULES_DIR/modules:$SNAP/usr/lib/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH"
+
+# Ensure runtime directory exists with proper permissions
+mkdir -p /var/run/pulse
+chmod 755 /var/run/pulse
+
+# Create state directory if it doesn't exist
+[ -e "$PULSE_STATE_PATH" ] || mkdir -p "$PULSE_STATE_PATH"
+
+# Extra debug arguments if enabled
+EXTRA_ARGS=()
+if [ -e "$SNAP_DATA"/config/debug ]; then
+    EXTRA_ARGS+=(-vvvv)
+    export LIBASOUND_DEBUG=1
+fi
+
+# Small delay to ensure runtime directory is ready
+sleep 1
+
+# Start PulseAudio without --system flag
+exec "$SNAP/usr/bin/pulseaudio" \
+    --exit-idle-time=-1 \
+    --disallow-exit=yes \
+    -F "$SNAP/etc/pulse/default.pa" \
+    -p "$PA_MODULES_DIR/modules" \
+    -n \
+    "${EXTRA_ARGS[@]}"

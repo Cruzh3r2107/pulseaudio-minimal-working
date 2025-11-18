@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# PulseAudio client wrapper for pactl and other utilities
+#
+
+if [ "$(id -u)" -ne 0 ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+export LD_LIBRARY_PATH="$SNAP/usr/lib/pulseaudio:$LD_LIBRARY_PATH"
+
+# Try to connect to the daemon socket
+# First check if running in system mode
+if [ -S /var/run/pulse/native ]; then
+    export PULSE_RUNTIME_PATH=/var/run/pulse
+    export PULSE_SYSTEM=1
+else
+    # Try user mode socket location
+    export PULSE_RUNTIME_PATH=$SNAP_COMMON/pulse
+    unset PULSE_SYSTEM
+fi
+
+export PULSE_CLIENTCONFIG=$SNAP/etc/pulse/client.conf
+
+unset XDG_RUNTIME_DIR
+
+export HOME=$SNAP_COMMON/home
+mkdir -p "$HOME"
+
+exec "$@"
