@@ -25,7 +25,7 @@ apps:
     daemon: simple
     install-mode: disable
     plugs: [alsa, hardware-observe, network, network-bind]
-    slots: [audio-playback, audo-record]
+    slots: [audio-playback, audio-record]
     environment: &_environment
       LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pulseaudio:$LD_LIBRARY_PATH"
       PULSE_RUNTIME_PATH: $SNAP_COMMON/var/run/pulse
