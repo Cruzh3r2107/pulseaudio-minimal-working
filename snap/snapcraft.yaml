@@ -1,6 +1,6 @@
-name: pulseaudio-minimal
+name: pulseaudio
 base: core24
-version: '17.0'
+adopt-info: pulseaudio
 summary: Minimal PulseAudio sound server for Ubuntu Core
 description: |
   A minimal PulseAudio sound server snap for Ubuntu Core 24,
@@ -11,13 +11,12 @@ grade: stable
 confinement: strict
 compression: lzo
 license: GPL-2.0+
-website: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap
-source-code: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap
-issues: https://github.com/Cruzh3r2107/pulseaudio-minimal-snap/issues
 
 platforms:
+  amd64:
+  # Enable cross-building for arm64
   arm64:
-    build-on: [arm64, amd64]
+    build-on: [amd64, arm64]
     build-for: [arm64]
 
 apps:
@@ -25,22 +24,19 @@ apps:
     command: bin/pulseaudio
     daemon: simple
     install-mode: disable
-    plugs:
-      - alsa
-      - network
-      - network-bind
-      - hardware-observe
-    slots:
-      - audio-playback
-      - audio-record
+    plugs: [alsa, hardware-observe, network, network-bind]
+    slots: [audio-playback, audo-record]
+    environment: &_environment
+      LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pulseaudio:$LD_LIBRARY_PATH"
+      PULSE_RUNTIME_PATH: $SNAP_COMMON/var/run/pulse
+      PULSE_STATE_PATH: $SNAP_COMMON/state
+      ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
 
   pactl:
     command-chain: [bin/client-wrapper]
     command: usr/bin/pactl
-    plugs:
-      - network
-      - playback
-      - record
+    plugs: [network, playback, record]
+    environment: *_environment
 
 plugs:
   playback:
@@ -53,12 +49,6 @@ slots:
     interface: audio-playback
   audio-record:
     interface: audio-record
-
-environment:
-  LD_LIBRARY_PATH: "$SNAP/usr/lib/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu/pulseaudio:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR"
-  PULSE_RUNTIME_PATH: /var/run/pulse
-  PULSE_STATE_PATH: $SNAP_COMMON/state
-  ALSA_CONFIG_PATH: $SNAP/usr/share/alsa/alsa.conf
 
 layout:
   /etc/pulse:
@@ -73,62 +63,30 @@ layout:
     symlink: $SNAP/usr/share/alsa
 
 parts:
-  scripts:
-    plugin: dump
-    source: bin/
-    organize:
-      client-wrapper: bin/client-wrapper
-      pulseaudio: bin/pulseaudio
-    override-prime: |
-      craftctl default
-      chmod +x $CRAFT_PRIME/bin/pulseaudio
-      chmod +x $CRAFT_PRIME/bin/client-wrapper
-
-  config:
-    plugin: dump
-    source: config/
-    organize:
-      default.pa: etc/pulse/default.pa
-      client.conf: etc/pulse/client.conf
-
   pulseaudio:
-    plugin: nil
-    after: [scripts, config]
+    plugin: dump
+    source: src/
     stage-packages:
-      # Core PulseAudio
-      - pulseaudio
-      - pulseaudio-utils
-      - libpulse0
-      # ALSA support
-      - libasound2
-      - libasound2-plugins
-      # Audio codecs
-      - libsndfile1
-      - libflac12
-      - libogg0
-      - libvorbis0a
-      - libvorbisenc2
-      - libopus0
-      # Essential dependencies
-      - libltdl7
-      - libspeexdsp1
-      - libasyncns0
-      - libtdb1
-      - libsoxr0
-      - liborc-0.4-0
+      - pulseaudio:$CRAFT_ARCH_BUILD_FOR
     override-build: |
+      craftctl set version="$(dpkg-deb -f "${CRAFT_PART_BUILD}/../stage_packages/pulseaudio"_*.deb Version)"
+
+      rm -f "${CRAFT_PART_INSTALL}/etc/pulse/client.conf" \
+            "${CRAFT_PART_INSTALL}/etc/pulse/default.pa"
+
       craftctl default
-      # Create necessary directories
-      mkdir -p $CRAFT_PART_INSTALL/var/run/pulse
-      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
+
+      pa_dir="$(basename "${CRAFT_PART_INSTALL}/usr/lib/pulse-"*)"
+      sed -i "s/_pa_modules_dir/$pa_dir/" "${CRAFT_PART_INSTALL}/bin/pulseaudio"
     stage:
-      # Stage all libraries - simple but larger
+      - bin/
+      - etc/alsa/
+      - etc/pulse/client.conf
+      - etc/pulse/default.pa
       - usr/bin/pulseaudio
       - usr/bin/pactl
       - usr/bin/pacmd
-      - usr/lib/*
-      - usr/share/pulseaudio/*
-      - usr/share/alsa/*
-      - etc/alsa/*
-      - var/run/pulse
-      - usr/share/applications
+      - usr/lib/pulse-*/
+      - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/
+      - usr/share/pulseaudio/
+      - usr/share/alsa/
