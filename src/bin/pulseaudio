@@ -6,10 +6,6 @@ PA_MODULES_DIR=_pa_modules_dir
 # Set library paths to include the modules directory
 export LD_LIBRARY_PATH="$SNAP/usr/lib/$PA_MODULES_DIR/modules:$LD_LIBRARY_PATH"
 
-# Ensure runtime directory exists with proper permissions
-mkdir -p /var/run/pulse
-chmod 755 /var/run/pulse
-
 # Create state directory if it doesn't exist
 [ -e "$PULSE_STATE_PATH" ] || mkdir -p "$PULSE_STATE_PATH"
 
