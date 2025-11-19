@@ -57,6 +57,8 @@ layout:
     bind: $SNAP/etc/alsa
   /var/lib/pulse:
     bind: $SNAP_DATA
+  /var/run/pulse:
+    bind: $SNAP_COMMON/var/run/pulse
   /usr/share/pulseaudio:
     symlink: $SNAP/usr/share/pulseaudio
   /usr/share/alsa:
