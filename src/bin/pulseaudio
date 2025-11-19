@@ -4,7 +4,7 @@
 PA_MODULES_DIR=_pa_modules_dir
 
 # Set library paths to include the modules directory
-export LD_LIBRARY_PATH="$PA_MODULES_DIR/modules:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$SNAP/usr/lib/$PA_MODULES_DIR/modules:$LD_LIBRARY_PATH"
 
 # Ensure runtime directory exists with proper permissions
 mkdir -p /var/run/pulse
@@ -28,6 +28,6 @@ exec "$SNAP/usr/bin/pulseaudio" \
     --exit-idle-time=-1 \
     --disallow-exit=yes \
     -F "$SNAP/etc/pulse/default.pa" \
-    -p "$PA_MODULES_DIR/modules" \
+    -p "$SNAP/usr/lib/$PA_MODULES_DIR/modules" \
     -n \
     "${EXTRA_ARGS[@]}"
