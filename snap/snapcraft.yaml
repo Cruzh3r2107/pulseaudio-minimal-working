@@ -69,7 +69,7 @@ parts:
     stage-packages:
       - pulseaudio:$CRAFT_ARCH_BUILD_FOR
     override-build: |
-      craftctl set version="$(dpkg-deb -f "${CRAFT_PART_BUILD}/../stage_packages/pulseaudio"_*.deb Version)"
+      craftctl set version="$(dpkg-deb -f "${CRAFT_PART_BUILD}/../stage_packages/pulseaudio"_*.deb Version | sed 's/^[0-9]*://')"
 
       rm -f "${CRAFT_PART_INSTALL}/etc/pulse/client.conf" \
             "${CRAFT_PART_INSTALL}/etc/pulse/default.pa"
